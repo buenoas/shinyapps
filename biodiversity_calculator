@@ -13,22 +13,22 @@ library(shiny)
 library(vegan)
 
 ui <- fluidPage(
-  titlePanel("Species Diversity Calculator"),
+  titlePanel("Calculadora de Biodiversidade"),
   sidebarLayout(
     sidebarPanel(
-      textInput(inputId = "abundance", label = "Enter a vector of abundances:", value = ""),
-      helpText("Abundance vector should contain comma separated values.")
+      textInput(inputId = "abundance", label = "Insira os valores de abundância de cada espécie", value = ""),
+      helpText("Os valores de abundância devem ser separados por vírgula.")
     ),
     mainPanel(
-      h4("Species Richness:"),
+      h4("Riqueza de espécies:"),
       verbatimTextOutput(outputId = "richness"),
-      h4("Total Abundance:"),
+      h4("Abundância total:"),
       verbatimTextOutput(outputId = "total_abundance"),
-      h4("Shannon Diversity Index:"),
+      h4("Índice de diversidade de Shannon:"),
       verbatimTextOutput(outputId = "shannon"),
-      h4("Simpson Diversity Index:"),
+      h4("Índice de diversidade de Simpson:"),
       verbatimTextOutput(outputId = "simpson"),
-      h4("Pielou's Evenness Index:"),
+      h4("Índice de equitabilidade de Pielou:"),
       verbatimTextOutput(outputId = "pielou")
     )
   )
