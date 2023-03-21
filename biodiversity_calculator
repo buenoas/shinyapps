@@ -1,0 +1,71 @@
+###########################################################
+### Shiny app to calculate several biodiversity metrics ###
+###########################################################
+
+# The metrics include:
+# Species Richness
+# Total Abundance
+# Shannon Diversity Index
+# Simpson Diversity Index
+# Pielou's Evenness Index
+
+library(shiny)
+library(vegan)
+
+ui <- fluidPage(
+  titlePanel("Species Diversity Calculator"),
+  sidebarLayout(
+    sidebarPanel(
+      textInput(inputId = "abundance", label = "Enter a vector of abundances:", value = ""),
+      helpText("Abundance vector should contain comma separated values.")
+    ),
+    mainPanel(
+      h4("Species Richness:"),
+      verbatimTextOutput(outputId = "richness"),
+      h4("Total Abundance:"),
+      verbatimTextOutput(outputId = "total_abundance"),
+      h4("Shannon Diversity Index:"),
+      verbatimTextOutput(outputId = "shannon"),
+      h4("Simpson Diversity Index:"),
+      verbatimTextOutput(outputId = "simpson"),
+      h4("Pielou's Evenness Index:"),
+      verbatimTextOutput(outputId = "pielou")
+    )
+  )
+)
+
+server <- function(input, output) {
+  output$richness <- renderPrint({
+    abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
+    length(abundance)
+  })
+  
+  output$total_abundance <- renderPrint({
+    abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
+    sum(abundance)
+  })
+  
+  output$shannon <- renderPrint({
+    abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
+    diversity(abundance, index = "shannon")
+  })
+  
+  output$simpson <- renderPrint({
+    abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
+    diversity(abundance, index = "simpson")
+  })
+  
+  output$pielou <- renderPrint({
+    abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
+    shannon_index <- diversity(abundance, index = "shannon")
+    richness <- length(abundance)
+    if (richness > 1) {
+      pielow_index <- shannon_index / log(richness)
+    } else {
+      pielow_index <- "N/A"
+    }
+    pielow_index
+  })
+}
+
+shinyApp(ui = ui, server = server)
