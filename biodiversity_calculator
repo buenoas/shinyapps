@@ -13,15 +13,15 @@ ui <- fluidPage(
   titlePanel("Calculadora de Biodiversidade"),
   sidebarLayout(
     sidebarPanel(
-      textInput(inputId = "abundance", label = "Insira os valores de abundancia de cada especie", value = ""),
-      helpText("Os valores de abundancia devem ser separados por virgula")
+      textInput(inputId = "abundance", label = "Insira os valores de abundância de cada espécie", value = ""),
+      helpText("Os valores de abundância devem ser separados por vírgula")
     ),
     mainPanel(
-      h4("Indice de diversidade de Shannon:"),
+      h4("Índice de diversidade de Shannon:"),
       verbatimTextOutput(outputId = "shannon"),
-      h4("Indice de diversidade de Simpson:"),
+      h4("Índice de diversidade de Simpson:"),
       verbatimTextOutput(outputId = "simpson"),
-      h4("Indice de equitabilidade de Pielou:"),
+      h4("Índice de equitabilidade de Pielou:"),
       verbatimTextOutput(outputId = "pielou"),
       plotOutput(outputId = "barplot")
     )
@@ -54,7 +54,7 @@ server <- function(input, output) {
   output$barplot <- renderPlot({
     abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
     barplot(abundance,
-            main = "Ranqueamento de abundancias",
+            main = "Ranqueamento de abundâncias",
             ylab = "Número de indivíduos",
             col = "#2f9e41")
   })
