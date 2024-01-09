@@ -1,8 +1,12 @@
+library(vegan)
+
 ###########################################################
 ### Shiny app to calculate several biodiversity metrics ###
 ###########################################################
 
 # The metrics include:
+# Species richness
+# Total abundance
 # Shannon Diversity Index
 # Simpson Diversity Index
 # Pielou's Evenness Index
@@ -17,7 +21,11 @@ ui <- fluidPage(
       helpText("Os valores de abundância devem ser separados por vírgula")
     ),
     mainPanel(
-      h4("Índice de diversidade de Shannon-Wiener:"),
+      h4("Riqueza de espécies:"),
+      verbatimTextOutput(outputId = "richness"),
+      h4("Abundância total:"),
+      verbatimTextOutput(outputId = "abundance"),
+      h4("Índice de diversidade de Shannon:"),
       verbatimTextOutput(outputId = "shannon"),
       h4("Índice de diversidade de Simpson:"),
       verbatimTextOutput(outputId = "simpson"),
@@ -29,6 +37,16 @@ ui <- fluidPage(
 )
 
 server <- function(input, output) {
+  output$richness <- renderPrint({
+    abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
+    specnumber(abundance)
+  })
+  
+  output$abundance <- renderPrint({
+    abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
+    sum(abundance)
+  })
+  
   output$shannon <- renderPrint({
     abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
     diversity(abundance, index = "shannon")
@@ -53,7 +71,7 @@ server <- function(input, output) {
   
   output$barplot <- renderPlot({
     abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
-    barplot(abundance,
+    barplot(sort(abundance, decreasing = TRUE),
             main = "Ranqueamento de abundâncias",
             ylab = "Número de indivíduos",
             col = "#2f9e41")
