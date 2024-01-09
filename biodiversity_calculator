@@ -17,7 +17,7 @@ ui <- fluidPage(
       helpText("Os valores de abundância devem ser separados por vírgula")
     ),
     mainPanel(
-      h4("Índice de diversidade de Shannon:"),
+      h4("Índice de diversidade de Shannon-Wiener:"),
       verbatimTextOutput(outputId = "shannon"),
       h4("Índice de diversidade de Simpson:"),
       verbatimTextOutput(outputId = "simpson"),
