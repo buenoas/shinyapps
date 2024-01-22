@@ -1,17 +1,20 @@
 library(vegan)
+library(fossil)
+library(iNEXT)
 
-###########################################################
-### Shiny app to calculate several biodiversity metrics ###
-###########################################################
+###################################################################
+### Shiny app para calcular diversas métricas de biodiversidade ###
+###################################################################
 
-# The metrics include:
-# Species richness
-# Total abundance
-# Shannon Diversity Index
-# Simpson Diversity Index
-# Pielou's Evenness Index
+# Número de espécies observado (riqueza)
+# Número de indivíduos (abundância)
+# Índice de diversidade de Shannon
+# Índice de diversidade de Simpson
+# Índice de equitabilidade de Pielou
+# Número de espécies estimado pelo índice Chao1
+# Porcentagem do número de espécies estimado que foi observado
 
-# The app also produces a barplot of species abundance.
+# O aplicativo ainda produzi um gráfico de barras com o raqueamento de abundância das espécies
 
 ui <- fluidPage(
   titlePanel("Calculadora de Biodiversidade"),
@@ -21,17 +24,22 @@ ui <- fluidPage(
       helpText("Os valores de abundância devem ser separados por vírgula")
     ),
     mainPanel(
-      h4("Riqueza de espécies:"),
+      h4("Número de espécies observado (riqueza)"),
       verbatimTextOutput(outputId = "richness"),
-      h4("Abundância total:"),
+      h4("Número de indivíduos (abundância)"),
       verbatimTextOutput(outputId = "abundance"),
-      h4("Índice de diversidade de Shannon:"),
+      h4("Índice de diversidade de Shannon"),
       verbatimTextOutput(outputId = "shannon"),
-      h4("Índice de diversidade de Simpson:"),
+      h4("Índice de diversidade de Simpson"),
       verbatimTextOutput(outputId = "simpson"),
-      h4("Índice de equitabilidade de Pielou:"),
+      h4("Índice de equitabilidade de Pielou"),
       verbatimTextOutput(outputId = "pielou"),
-      plotOutput(outputId = "barplot")
+      h4("Número de espécies estimado pelo índice Chao1"),
+      verbatimTextOutput(outputId = "chao1"),
+      h4("Porcentagem do número de espécies estimado que foi observado"),
+      verbatimTextOutput(outputId = "completeness"),
+      plotOutput(outputId = "barplot"),
+      plotOutput(outputId = "sac")
     )
   )
 )
@@ -49,18 +57,18 @@ server <- function(input, output) {
   
   output$shannon <- renderPrint({
     abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
-    diversity(abundance, index = "shannon")
+    diversity(abundance, "shannon")
   })
   
   output$simpson <- renderPrint({
     abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
-    diversity(abundance, index = "simpson")
+    diversity(abundance, "simpson")
   })
   
   output$pielou <- renderPrint({
     abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
     shannon_index <- diversity(abundance, index = "shannon")
-    richness <- length(abundance)
+    richness <- specnumber(abundance)
     if (richness > 1) {
       pielow_index <- shannon_index / log(richness)
     } else {
@@ -69,12 +77,33 @@ server <- function(input, output) {
     pielow_index
   })
   
+  output$chao1 <- renderPrint({
+    abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
+    chao1(abundance)
+  })
+  
+  output$completeness <- renderPrint({
+    abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
+    specnumber(abundance) / chao1(abundance) * 100
+  })
+  
   output$barplot <- renderPlot({
     abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
     barplot(sort(abundance, decreasing = TRUE),
-            main = "Ranqueamento de abundâncias",
-            ylab = "Número de indivíduos",
-            col = "#2f9e41")
+            main = "Raqueamento de abundância das espécies",
+            ylab = "Número de indivíduos")
+  })
+  
+  output$sac <- renderPlot({
+    abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
+    out <- iNEXT(abundance)
+    out_size <- out$iNextEst$size_based
+    out_size_obs <- subset(out_size, Method != "Extrapolation")
+    plot(out_size_obs$m, out_size_obs$qD,
+         type = "l", lwd = 3,
+         main = "Curva de suficiência amostral",
+         xlab = "Número de indivíduos",
+         ylab = "Número de espécies")
   })
 }
 
