@@ -11,10 +11,10 @@ library(iNEXT)
 # Índice de diversidade de Shannon
 # Índice de diversidade de Simpson
 # Índice de equitabilidade de Pielou
-# Número de espécies estimado pelo índice Chao1
+# Número de espécies estimado pelo índice de Chao
 # Porcentagem do número de espécies estimado que foi observado
 
-# O aplicativo ainda produzi um gráfico de barras com o raqueamento de abundância das espécies
+# O aplicativo ainda produz um gráfico de barras com o raqueamento de abundância das espécies e um grafico com a curva de suficiência amostral
 
 ui <- fluidPage(
   titlePanel("Calculadora de Biodiversidade"),
@@ -34,7 +34,7 @@ ui <- fluidPage(
       verbatimTextOutput(outputId = "simpson"),
       h4("Índice de equitabilidade de Pielou"),
       verbatimTextOutput(outputId = "pielou"),
-      h4("Número de espécies estimado pelo índice Chao1"),
+      h4("Número de espécies estimado pelo índice de Chao"),
       verbatimTextOutput(outputId = "chao1"),
       h4("Porcentagem do número de espécies estimado que foi observado"),
       verbatimTextOutput(outputId = "completeness"),
@@ -90,8 +90,10 @@ server <- function(input, output) {
   output$barplot <- renderPlot({
     abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
     barplot(sort(abundance, decreasing = TRUE),
+            yaxt = "n",
             main = "Raqueamento de abundância das espécies",
             ylab = "Número de indivíduos")
+    axis(side = 2, las = 2)
   })
   
   output$sac <- renderPlot({
@@ -100,10 +102,11 @@ server <- function(input, output) {
     out_size <- out$iNextEst$size_based
     out_size_obs <- subset(out_size, Method != "Extrapolation")
     plot(out_size_obs$m, out_size_obs$qD,
-         type = "l", lwd = 3,
+         yaxt = "n", type = "l", lwd = 3,
          main = "Curva de suficiência amostral",
          xlab = "Número de indivíduos",
          ylab = "Número de espécies")
+    axis(side = 2, las = 2)
   })
 }
 
