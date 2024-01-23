@@ -98,7 +98,11 @@ server <- function(input, output) {
   
   output$sac <- renderPlot({
     abundance <- as.numeric(unlist(strsplit(input$abundance, ",")))
-    out <- iNEXT(abundance)
+    out <- iNEXT(x = abundance,
+                 endpoint = sum(abundance),
+                 knots = sum(abundance),
+                 se = FALSE,
+                 nboot = 100)
     out_size <- out$iNextEst$size_based
     out_size_obs <- subset(out_size, Method != "Extrapolation")
     plot(out_size_obs$m, out_size_obs$qD,
