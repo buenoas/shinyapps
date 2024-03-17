@@ -1,0 +1,112 @@
+# Load required libraries
+library(shiny)
+library(readxl)
+library(dplyr)
+library(reshape2)
+library(stringr)
+library(ggplot2)
+library(ggpubr)
+
+# Load the Excel data
+data <- read_excel("Koppen Brazilian municipalities.xls", sheet = 2)
+
+# Data handling
+d = melt(data)
+
+d = subset(d, variable != "IBGE-Code")
+d = subset(d, variable != "Altitude")
+d = droplevels(d)
+
+precipitation = d[66805:133608, 6]
+
+d = d[1:66804, ]
+
+d$variable = str_to_sentence(word(d$variable, 2, sep = "_"))
+d$variable[d$variable == "Jan"] = "Jan"
+d$variable[d$variable == "Feb"] = "Fev"
+d$variable[d$variable == "Mar"] = "Mar"
+d$variable[d$variable == "Apr"] = "Abr"
+d$variable[d$variable == "May"] = "Mai"
+d$variable[d$variable == "Jun"] = "Jun"
+d$variable[d$variable == "Jul"] = "Jul"
+d$variable[d$variable == "Aug"] = "Ago"
+d$variable[d$variable == "Sep"] = "Set"
+d$variable[d$variable == "Oct"] = "Out"
+d$variable[d$variable == "Nov"] = "Nov"
+d$variable[d$variable == "Dec"] = "Dez"
+d$variable = factor(d$variable,
+                    levels = unique(d$variable))
+d$Precipitation = precipitation
+
+colnames(d)[5:6] = c("Month", "Temperature")
+rownames(d) = NULL
+
+d = d[order(d$State, d$Municipality), ]
+
+data = d
+
+# Define UI
+ui <- fluidPage(
+  titlePanel("Clima Municipal"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("State", "Estado", choices = unique(data$State)),
+      selectInput("Municipality", "Município", choices = NULL)
+    ),
+    
+    mainPanel(
+      plotOutput("climatePlot")
+    )
+  )
+)
+
+# Define server logic
+server <- function(input, output, session) {
+  # Update municipality choices based on selected State
+  observe({
+    Municipalities <- data %>%
+      filter(State == input$State) %>%
+      select(Municipality) %>%
+      unique() %>%
+      pull()
+    
+    updateSelectInput(session, "Municipality", choices = Municipalities)
+  })
+  
+  # Filter data based on selected State and municipality
+  selected_data <- reactive({
+    data %>%
+      filter(State == input$State, Municipality == input$Municipality)
+  })
+  
+  # Render the climate plot
+  output$climatePlot <- renderPlot({
+    ggplot(data = selected_data(),
+           mapping = aes(x = Month, y = Temperature, group = 1)) + 
+      geom_bar(data = selected_data(),
+               mapping = aes(x = Month, y = Precipitation/10),
+               stat = "identity", color = "#4DBBD5", fill = "#4DBBD5",
+               width = 0.75) +
+      geom_line(color = "#E64B35", linewidth = 1.25) +
+      scale_y_continuous("Temperatura média (°C)\n", 
+                         sec.axis = sec_axis(~.*10, name = "Precipitação acumulada (mm)\n")) +
+      labs(x = NULL,
+           title = paste0(input$Municipality, ", ", input$State),
+           caption = "\nFonte dos dados: Alvares et al. (2013)\nDisponível em https://doi.org/10.1127/0941-2948/2013/0507") +
+      theme_pubr(base_size = 16) +
+      theme(panel.grid.major.y = element_line(colour = "grey90"),
+            panel.grid.minor.y = element_line(colour = "grey90"),
+            axis.line = element_blank(),
+            axis.title.y.left = element_text(colour = "#E64B35"),
+            axis.text.y.left = element_text(colour = "#E64B35"),
+            axis.title.y.right = element_text(colour = "#4DBBD5"),
+            axis.text.y.right = element_text(colour = "#4DBBD5"),
+            axis.ticks = element_blank(),
+            plot.title = element_text(hjust = 0.5, face = "bold"),
+            plot.caption = element_text(hjust = 0, colour = "grey50"))
+  })
+}
+
+# Run the app
+shinyApp(ui = ui, server = server)
