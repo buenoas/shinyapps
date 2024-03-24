@@ -134,9 +134,9 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
-      selectInput("taxa", "Taxa:", choices = unique(metadata$taxa)),
-      selectInput("biome", "Biome:", choices = NULL),
-      selectInput("matrix_category", "Matrix Category:", choices = NULL),
+      selectInput("taxa", "Taxon:", choices = unique(metadata$taxa)),
+      selectInput("biome", "Habitat:", choices = NULL),
+      selectInput("matrix_category", "Matrix type:", choices = NULL),
       selectInput("country", "Country:", choices = NULL),
       selectInput("studyID", "Study ID:", choices = NULL),
       actionButton("plotBtn", "Plot")
