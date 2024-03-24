@@ -1,0 +1,188 @@
+# This Shiny App creates species accumulation curves following Quinn & Harris (1988): https://doi.org/10.1007/BF00378826
+# It uses the database FragSAD (Chase et al. 2019): https://doi.org/10.1002/ecy.2861
+
+# Required libraries
+library(shiny)
+library(ggplot2)
+
+# Load the function `fragsad`
+fragsad <- function(x, metadata) {
+  
+  fragsad.abundances <- read.csv("https://raw.githubusercontent.com/buenoas/R-functions/main/abundances_utf8.csv",
+                                 encoding = "UTF-8")
+  
+  fragsad.metadata <- read.csv("https://raw.githubusercontent.com/buenoas/R-functions/main/metadata_utf8.csv",
+                               encoding = "UTF-8")
+  
+  fragsad.abundances$ID <- paste(fragsad.abundances$refshort,
+                                 fragsad.abundances$site_id,
+                                 fragsad.abundances$plot_id,
+                                 sep = "_")
+  
+  fragsad.metadata$ID <- paste(fragsad.metadata$refshort,
+                               fragsad.metadata$site_id,
+                               fragsad.metadata$plot_id,
+                               sep = "_")
+  
+  fragsad_data <- data.frame(fragsad.abundances,
+                             fragsad.metadata[match(fragsad.abundances$ID, fragsad.metadata$ID), ])
+  
+  fragsad_data[, which(grepl(".1", names(fragsad_data)))] <- NULL
+  fragsad_data$ID <- NULL
+  
+  dat <- subset(fragsad_data, refshort == x)
+  
+  # Site-by-species abundance matrix
+  dat_mx <- tapply(dat$abundance, list(dat$site_id, dat$scientific_name), sum)
+  
+  # Species non detected in a given site are real zeros
+  dat_mx[is.na(dat_mx)] <- 0
+  
+  # Convert the matrix in a data.frame
+  dat_mx <- as.data.frame(dat_mx)
+  
+  # Calculate species richness
+  richness <- rowSums(ifelse(dat_mx > 0, 1, 0))
+  
+  # Patch size (area)
+  area <- as.numeric(dat$site_size[match(rownames(dat_mx), dat$site_id)])
+  
+  # Species group (taxon)
+  taxon <- unique(subset(fragsad.metadata, refshort == x)$taxa)
+  
+  # Habitat type
+  habitat <- unique(subset(fragsad.metadata, refshort == x)$biome)
+  
+  # Matrix category
+  matrix <- unique(subset(fragsad.metadata, refshort == x)$matrix_category)
+  
+  # Country
+  country <- unique(subset(fragsad.metadata, refshort == x)$country)
+  
+  # StudyID
+  studyid <- unique(subset(fragsad.metadata, refshort == x)$refshort)
+  
+  return(list(community = dat_mx,
+              species_richness = richness,
+              patch_area = area,
+              taxon = taxon,
+              habitat = habitat,
+              matrix = matrix,
+              country = country,
+              studyID = studyid))
+  
+}
+
+# Load the function `qh_curves`
+qh_curves <- function(x) {
+  
+  require(vegan)
+  
+  # Comm data
+  comm <- x$community
+  
+  # Order sites in increasing and decreasing order of patch area
+  small_to_large <- comm[order(x$patch_area), ]
+  large_to_small <- comm[order(-x$patch_area), ]
+  
+  # Species accumulation curves
+  small_to_large_curve <- specaccum(small_to_large, method = "collector")
+  large_to_small_curve <- specaccum(large_to_small, method = "collector")
+  
+  plot(cumsum(sort(x$patch_area)),
+       small_to_large_curve$richness,
+       xaxt = "n",
+       yaxt = "n",
+       ylim = c(0, ncol(comm) + 1),
+       xlab = "Cumulative patch area",
+       ylab = "Cumulative number of species",
+       main = paste0("Quinn-Harrison curves\n", x$studyID),
+       pch = 16, cex = 1, col = "#d7191c")
+  axis(2, at = seq(0, ncol(comm), 5))
+  axis(1)
+  
+  lines(cumsum(sort(x$patch_area)),
+        small_to_large_curve$richness,
+        lwd = 2, col = "#d7191c")
+  
+  points(cumsum(sort(x$patch_area, decreasing = TRUE)),
+         pch = 16, cex = 1, col = "#2b83ba",
+         large_to_small_curve$richness)
+  
+  lines(cumsum(sort(x$patch_area, decreasing = TRUE)),
+        large_to_small_curve$richness,
+        lwd = 2, col = "#2b83ba")
+  
+  legend("bottomright", legend=c("Small to large",
+                                 "Large to small"),
+         col=c("#d7191c", "#2b83ba"),
+         lwd = 2, lty = c("solid", "solid"), cex = 1,
+         box.lty = 0)
+  
+}
+
+# Load the FragSAD database from GitHub
+abundance <- read.csv("https://raw.githubusercontent.com/buenoas/R-functions/main/abundances_utf8.csv",
+                      encoding = "UTF-8")
+metadata <- read.csv("https://raw.githubusercontent.com/buenoas/R-functions/main/metadata_utf8.csv",
+                     encoding = "UTF-8")
+
+# Define UI
+ui <- fluidPage(
+  
+  titlePanel("Species Accumulation Curves"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("taxa", "Taxa:", choices = unique(metadata$taxa)),
+      selectInput("biome", "Biome:", choices = NULL),
+      selectInput("matrix_category", "Matrix Category:", choices = NULL),
+      selectInput("country", "Country:", choices = NULL),
+      selectInput("studyID", "Study ID:", choices = NULL),
+      actionButton("plotBtn", "Plot")
+    ),
+    
+    mainPanel(
+      plotOutput("speciesPlot")
+    )
+  )
+)
+
+# Define server logic
+server <- function(input, output, session) {
+  
+  observe({
+    if (!is.null(input$taxa)) {
+      updateSelectInput(session, "biome", choices = unique(metadata$biome[metadata$taxa == input$taxa]))
+    }
+  })
+  
+  observe({
+    if (!is.null(input$biome)) {
+      updateSelectInput(session, "matrix_category", choices = unique(metadata$matrix_category[metadata$taxa == input$taxa & metadata$biome == input$biome]))
+    }
+  })
+  
+  observe({
+    if (!is.null(input$matrix_category)) {
+      updateSelectInput(session, "country", choices = unique(metadata$country[metadata$taxa == input$taxa & metadata$biome == input$biome & metadata$matrix_category == input$matrix_category]))
+    }
+  })
+  
+  observe({
+    if (!is.null(input$country)) {
+      updateSelectInput(session, "studyID", choices = unique(metadata$refshort[metadata$taxa == input$taxa & metadata$biome == input$biome & metadata$matrix_category == input$matrix_category & metadata$country == input$country]))
+    }
+  })
+  
+  output$speciesPlot <- renderPlot({
+    req(input$plotBtn)
+    req(input$studyID)
+    
+    x <- fragsad(input$studyID, metadata)
+    qh_curves(x)
+  })
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
