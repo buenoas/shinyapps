@@ -30,6 +30,10 @@ fragsad <- function(x, metadata) {
   fragsad_data[, which(grepl(".1", names(fragsad_data)))] <- NULL
   fragsad_data$ID <- NULL
   
+  # Remove continuous habitats
+  fragsad_data <- subset(fragsad_data, site_size != "continuous")
+  
+  # Select a given dataset
   dat <- subset(fragsad_data, refshort == x)
   
   # Site-by-species abundance matrix
@@ -122,10 +126,21 @@ qh_curves <- function(x) {
 }
 
 # Load the FragSAD database from GitHub
-abundance <- read.csv("https://raw.githubusercontent.com/buenoas/R-functions/main/abundances_utf8.csv",
-                      encoding = "UTF-8")
 metadata <- read.csv("https://raw.githubusercontent.com/buenoas/R-functions/main/metadata_utf8.csv",
                      encoding = "UTF-8")
+
+# Remove continuous habitats
+metadata <- subset(metadata, site_size != "continuous")
+
+# Keep only datasets with at least habitat fragments
+refshorts2keep <- 
+  names(
+    which(
+      table(
+        unique(
+          cbind(metadata$refshort, metadata$site_id))[, 1]) > 4))
+
+metadata <- metadata[metadata$refshort %in% refshorts2keep, ]
 
 # Define UI
 ui <- fluidPage(
@@ -143,7 +158,8 @@ ui <- fluidPage(
     ),
     
     mainPanel(
-      plotOutput("speciesPlot")
+      plotOutput("speciesPlot"),
+      htmlOutput("link")
     )
   )
 )
@@ -181,6 +197,10 @@ server <- function(input, output, session) {
     
     x <- fragsad(input$studyID, metadata)
     qh_curves(x)
+  })
+  
+  output$link <- renderUI({
+    HTML('<a href="https://forms.gle/XoM93qvbDKZiXeXC6" target="_blank">Click here to submit your conclusion</a>')
   })
 }
 
