@@ -132,7 +132,7 @@ metadata <- read.csv("https://raw.githubusercontent.com/buenoas/R-functions/main
 # Remove continuous habitats
 metadata <- subset(metadata, site_size != "continuous")
 
-# Keep only datasets with at least habitat fragments
+# Keep only datasets with at least 5 habitat fragments
 refshorts2keep <- 
   names(
     which(
